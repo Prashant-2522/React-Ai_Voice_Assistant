@@ -65,8 +65,8 @@ const App = () => {
 
   const handleVoiceCommand = async (command) => {
     command = command.toLowerCase().trim();
-    if (command.startsWith("Pookie ")) {
-      command = command.replace("Pookie ", "");
+    if (command.startsWith("Friday ")) {
+      command = command.replace("Friday ", "");
     }
     if (command.startsWith("open ")) {
       const site = command.split("open ")[1].trim();
@@ -92,22 +92,22 @@ const App = () => {
 
     if (command.includes("what is your name")) {
       const response =
-        "Hello Sir I'm fineshyt pookie, Your voice assistant created by Prashant Yadav";
+        "Hello Sir I'm friday, Your voice assistant created by Prashant Yadav";
       speakText(response);
       setInformation(response);
       return;
-    } else if (command.includes("hi babu")) {
-      const response = "Hello babu, what are you looking for today";
+    } else if (command.includes("hi friday")) {
+      const response = "Hello sir, what are you looking for today";
       speakText(response);
       setInformation(response);
       return;
     } else if (command.includes("what is your age")) {
-      const response = "Hello Sir I'm fineshyt pookie, I'm 2 day old";
+      const response = "Hello Sir I'm friday, I'm 5 months old";
       speakText(response);
       setInformation(response);
       return;
-    } else if (command.includes("who is your daddy")) {
-      const response = "Hello Sir Mr. yadav is my daddy ahaahahaha";
+    } else if (command.includes("who is your creator")) {
+      const response = "Hello Sir Mr. yadav is my creator";
       speakText(response);
       setInformation(response);
       return;
@@ -186,7 +186,7 @@ const App = () => {
     <div>
       <div className="voice-assistant">
         <img src={img} alt="AI" className="ai-image" />
-        <h2>Voice Assistant (fineshyt Pookie)</h2>
+        <h2>Voice Assistant (friday)</h2>
 
         <button className="btn" onClick={startListening} disabled={isListening}>
           <i className="fas fa-microphone"></i>
