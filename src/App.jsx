@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import img from "./ai-human.avif";
 
 const App = () => {
@@ -6,80 +6,122 @@ const App = () => {
   const [isListening, setIsListening] = useState(false);
   const [information, setInformation] = useState("");
   const [voices, setVoice] = useState([]);
+  const [isSupported, setIsSupported] = useState(true);
 
-  // Safe Speech Recognition setup
-  const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
+  const recognitionRef = useRef(null);
 
-  let recognition = null;
-
-  if (SpeechRecognition) {
-    recognition = new SpeechRecognition();
-  }
-
-  const loadVoice = () => {
-    const allVoice = window.speechSynthesis.getVoices();
-    setVoice(allVoice);
-  };
-
+  // ------------------- SETUP SPEECH RECOGNITION (CLIENT SIDE ONLY) -------------------
   useEffect(() => {
-    if (window.speechSynthesis.onvoiceschanged !== undefined) {
-      window.speechSynthesis.onvoiceschanged = loadVoice;
-    } else {
-      loadVoice();
+    if (typeof window !== "undefined") {
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
+
+      if (!SpeechRecognition) {
+        console.log("❌ Speech Recognition not supported");
+        setIsSupported(false);
+        return;
+      }
+
+      console.log("✅ Speech Recognition supported");
+
+      const recognition = new SpeechRecognition();
+      recognition.lang = "en-US";
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onstart = () => {
+        console.log("🎤 Recognition started");
+      };
+
+      recognition.onresult = (event) => {
+        const spokenText = event.results[0][0].transcript.toLowerCase();
+        console.log("You said:", spokenText);
+        setTranscript(spokenText);
+        handleVoiceCommand(spokenText);
+      };
+
+      recognition.onerror = (event) => {
+        console.log("❌ Recognition error:", event.error);
+      };
+
+      recognition.onend = () => {
+        console.log("🎤 Recognition ended");
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
     }
   }, []);
 
+  // ------------------- LOAD VOICES PROPERLY -------------------
+  const loadVoice = () => {
+    const allVoices = window.speechSynthesis.getVoices();
+    if (allVoices.length > 0) {
+      setVoice(allVoices);
+      console.log("🔊 Voices loaded:", allVoices);
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      loadVoice();
+      window.speechSynthesis.onvoiceschanged = loadVoice;
+    }
+  }, []);
+
+  // ------------------- START LISTENING -------------------
   const startListening = () => {
-    if (!recognition) {
-      alert(
-        "Speech Recognition is not supported in this browser. Please use Google Chrome."
-      );
+    if (!recognitionRef.current) {
+      alert("Speech Recognition not supported. Please use Google Chrome.");
       return;
     }
 
-    recognition.start();
+    recognitionRef.current.start();
     setIsListening(true);
   };
 
-  if (recognition) {
-    recognition.onresult = (event) => {
-      const spokenText = event.results[0][0].transcript.toLowerCase();
-      setTranscript(spokenText);
-      handleVoiceCommand(spokenText);
-    };
-
-    recognition.onend = () => setIsListening(false);
-  }
-
+  // ------------------- SPEAK TEXT (TEXT TO SPEECH) -------------------
   const speakText = (text) => {
-    if (voices.length === 0) {
-      console.warn("No voice available yet.");
+    if (!window.speechSynthesis) {
+      alert("Speech synthesis not supported in this browser.");
       return;
     }
 
+    // Cancel any previous speech
+    window.speechSynthesis.cancel();
+
     const utterance = new SpeechSynthesisUtterance(text);
 
-    const maleEnglishVoice =
-      voices.find(
-        (voice) =>
-          voice.lang.startsWith("en-") &&
-          voice.name.toLowerCase().includes("male")
-      ) ||
-      voices.find((voice) => voice.lang.startsWith("en-")) ||
-      voices[0];
+    // Choose a safe English voice
+    let selectedVoice = null;
 
-    utterance.voice = maleEnglishVoice;
-    utterance.lang = maleEnglishVoice.lang || "en-US";
+    if (voices.length > 0) {
+      selectedVoice =
+        voices.find((voice) => voice.lang.startsWith("en")) || voices[0];
+    }
+
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+      utterance.lang = selectedVoice.lang;
+    } else {
+      utterance.lang = "en-US";
+    }
+
     utterance.rate = 1;
     utterance.pitch = 1;
     utterance.volume = 1;
 
+    console.log("🔊 Speaking:", text);
+
+    // Chrome audio fix
+    window.speechSynthesis.resume();
     window.speechSynthesis.speak(utterance);
   };
 
+  // ------------------- HANDLE VOICE COMMAND -------------------
   const handleVoiceCommand = async (command) => {
     command = command.toLowerCase().trim();
+
     if (command.startsWith("friday ")) {
       command = command.replace("friday ", "");
     }
@@ -165,6 +207,7 @@ const App = () => {
     }
   };
 
+  // ------------------- FETCH WIKIPEDIA DATA -------------------
   const fetchPersonData = async (person) => {
     const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(
       person
@@ -187,6 +230,7 @@ const App = () => {
     }
   };
 
+  // ------------------- GOOGLE SEARCH -------------------
   const performGoogleSearch = (query) => {
     const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(
       query
@@ -194,13 +238,14 @@ const App = () => {
     window.open(searchUrl, "_blank");
   };
 
+  // ------------------- UI -------------------
   return (
     <div>
       <div className="voice-assistant">
         <img src={img} alt="AI" className="ai-image" />
         <h2>Voice Assistant (Friday)</h2>
 
-        {!SpeechRecognition && (
+        {!isSupported && (
           <p style={{ color: "red" }}>
             Speech Recognition works only in Google Chrome browser.
           </p>
