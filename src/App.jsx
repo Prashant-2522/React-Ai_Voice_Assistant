@@ -2,18 +2,24 @@ import React, { useEffect, useState } from "react";
 import img from "./ai-human.avif";
 
 const App = () => {
-  const [transcript, setTarnscript] = useState("");
+  const [transcript, setTranscript] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [information, setInformation] = useState("");
-  const [voices, setvoice] = useState([]);
+  const [voices, setVoice] = useState([]);
 
+  // Safe Speech Recognition setup
   const SpeechRecognition =
     window.SpeechRecognition || window.webkitSpeechRecognition;
-  const recognition = new SpeechRecognition();
+
+  let recognition = null;
+
+  if (SpeechRecognition) {
+    recognition = new SpeechRecognition();
+  }
 
   const loadVoice = () => {
     const allVoice = window.speechSynthesis.getVoices();
-    setvoice(allVoice);
+    setVoice(allVoice);
   };
 
   useEffect(() => {
@@ -25,17 +31,26 @@ const App = () => {
   }, []);
 
   const startListening = () => {
+    if (!recognition) {
+      alert(
+        "Speech Recognition is not supported in this browser. Please use Google Chrome."
+      );
+      return;
+    }
+
     recognition.start();
     setIsListening(true);
   };
 
-  recognition.onresult = (event) => {
-    const spokenText = event.results[0][0].transcript.toLowerCase();
-    setTarnscript(spokenText);
-    handleVoiceCommand(spokenText);
-  };
+  if (recognition) {
+    recognition.onresult = (event) => {
+      const spokenText = event.results[0][0].transcript.toLowerCase();
+      setTranscript(spokenText);
+      handleVoiceCommand(spokenText);
+    };
 
-  recognition.onend = () => setIsListening(false);
+    recognition.onend = () => setIsListening(false);
+  }
 
   const speakText = (text) => {
     if (voices.length === 0) {
@@ -65,9 +80,10 @@ const App = () => {
 
   const handleVoiceCommand = async (command) => {
     command = command.toLowerCase().trim();
-    if (command.startsWith("Friday ")) {
-      command = command.replace("Friday ", "");
+    if (command.startsWith("friday ")) {
+      command = command.replace("friday ", "");
     }
+
     if (command.startsWith("open ")) {
       const site = command.split("open ")[1].trim();
 
@@ -85,14 +101,14 @@ const App = () => {
         setInformation(`Opened ${site}`);
       } else {
         speakText(`I don't know how to open ${site}`);
-        setInformation(`Could not find the website for  ${site}`);
+        setInformation(`Could not find the website for ${site}`);
       }
       return;
     }
 
     if (command.includes("what is your name")) {
       const response =
-        "Hello Sir I'm friday, Your voice assistant created by Prashant Yadav";
+        "Hello Sir I'm Friday, your voice assistant created by Prashant Yadav";
       speakText(response);
       setInformation(response);
       return;
@@ -102,12 +118,12 @@ const App = () => {
       setInformation(response);
       return;
     } else if (command.includes("what is your age")) {
-      const response = "Hello Sir I'm friday, I'm 5 months old";
+      const response = "Hello Sir I'm Friday, I'm 5 months old";
       speakText(response);
       setInformation(response);
       return;
     } else if (command.includes("who is your creator")) {
-      const response = "Hello Sir Mr. yadav is my creator";
+      const response = "Hello Sir Mr. Yadav is my creator";
       speakText(response);
       setInformation(response);
       return;
@@ -136,19 +152,16 @@ const App = () => {
         const infoText = `${personData.name}, ${personData.extract}`;
         setInformation(infoText);
         speakText(infoText);
-
-        performGoogleSeach(command);
+        performGoogleSearch(command);
       } else {
         const fallbackMessage = "I couldn't find detailed information";
-
         speakText(fallbackMessage);
-        performGoogleSeach(command);
+        performGoogleSearch(command);
       }
     } else {
       const fallbackMessage = `Here is the information about ${command}`;
-
       speakText(fallbackMessage);
-      performGoogleSeach(command);
+      performGoogleSearch(command);
     }
   };
 
@@ -174,11 +187,10 @@ const App = () => {
     }
   };
 
-  const performGoogleSeach = (query) => {
+  const performGoogleSearch = (query) => {
     const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(
       query
     )}`;
-
     window.open(searchUrl, "_blank");
   };
 
@@ -186,12 +198,19 @@ const App = () => {
     <div>
       <div className="voice-assistant">
         <img src={img} alt="AI" className="ai-image" />
-        <h2>Voice Assistant (friday)</h2>
+        <h2>Voice Assistant (Friday)</h2>
+
+        {!SpeechRecognition && (
+          <p style={{ color: "red" }}>
+            Speech Recognition works only in Google Chrome browser.
+          </p>
+        )}
 
         <button className="btn" onClick={startListening} disabled={isListening}>
           <i className="fas fa-microphone"></i>
           {isListening ? "Listening..." : "Start Listening"}
         </button>
+
         <p className="tarnscript">{transcript}</p>
         <p className="information">{information}</p>
       </div>
